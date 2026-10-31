@@ -291,6 +291,9 @@ const _ENG_CJK_RE = /[\u2E80-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFFEF]/;
 function engraveLatinScale(fam){ const f = ENGRAVE_FONTS.find(x=>x.family===fam); return (f && f.sz) || 1; }
 function engraveCharPx(ch, base, fam){ return _ENG_CJK_RE.test(ch) ? base : base*engraveLatinScale(fam); }
 function engraveFontOf(base, ch, fam){ return `700 ${engraveCharPx(ch, base, fam)}px ${fam}`; }
+/* 個別字體的字距(以字級倍數表示);沒列在這裡的字體用預設 0.0625em。Italianno:10/88 em */
+const ENGRAVE_GAP_EM = {italianno: 10/88};
+function engraveGapEm(fam){ const f = ENGRAVE_FONTS.find(x=>x.family===fam); return (f && ENGRAVE_GAP_EM[f.key]) || 0.0625; }
 /* 預覽框用:把非中日韓的連續文字包上 font-size 係數(輸入已是跳脫過的 HTML 文字) */
 function engraveRunsHTML(escaped, fam){
   const sz = engraveLatinScale(fam);
@@ -424,7 +427,7 @@ function engravePreviewHTML(){
   if(!rows.length) rows.push({caption:'', t:'尚未選擇刻字位置', c:'#a89f90', fam:"'Noto Sans TC', sans-serif"});
   return `<div class="efp-preview-wrap">${rows.map((r,i)=>`
     ${i>0?'<div class="efp-preview-line"></div>':''}
-    <div class="efp-preview-row"><div class="efp-preview-text" style="font-family:${r.fam};color:${r.c};">${r.engraved?engraveRunsHTML(r.t, r.fam):r.t}</div>
+    <div class="efp-preview-row"><div class="efp-preview-text" style="font-family:${r.fam};color:${r.c};letter-spacing:${engraveGapEm(r.fam)}em;">${r.engraved?engraveRunsHTML(r.t, r.fam):r.t}</div>
     ${r.caption?`<p class="efp-preview-caption">${r.caption}</p>`:''}</div>`).join('')}</div>`;
 }
 function renderEngrave(){
@@ -667,7 +670,7 @@ function buildDesignPhotoCanvas(){
     ctx.fillStyle = st.innerColor==='black' ? '#2a251f' : '#9c9690';
     {
       const fam0 = fontOf(st.innerFont).family, txt0 = st.innerText || '(尚未填寫)';
-      let fs0 = 27, gap0 = fs0*0.0625;
+      let fs0 = 27, gap0 = fs0*engraveGapEm(fam0);
       const chs = Array.from(txt0);
       const meas = ()=>chs.map(c=>{ ctx.font = engraveFontOf(fs0, c, fam0); return ctx.measureText(c).width; });
       let w0 = meas(); let tot = w0.reduce((a,b)=>a+b,0) + gap0*Math.max(0,chs.length-1);
@@ -925,9 +928,9 @@ function buildInnerTex(thc, H){
   ctx.setTransform(cw/C/S,0,0,ch/H/S,0,0);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle = st.innerColor==='black' ? '#2a251f' : '#9c9690';
-  const f = 1.026;   /* 內側刻字大小與上一版相同 */
+  const f = 1.026*1.1;   /* 內側刻字大小(原 1.026,放大 10%) */
   const fam = fontOf(st.innerFont).family;
-  const gap = f*0.0625*S;   /* 字距 0.0625em(約 5px/80px) */
+  const gap = f*engraveGapEm(fam)*S;   /* 字距 0.0625em(約 5px/80px) */
   const chars = Array.from(st.innerText);
   ctx.textAlign='left';
   const ws = chars.map(c=>{ ctx.font = engraveFontOf(f*S, c, fam); return ctx.measureText(c).width; });
