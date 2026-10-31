@@ -124,7 +124,7 @@ select:focus{outline:2px solid var(--gold);outline-offset:1px;}
 .efp-select-group-label{font-size:10.5px;letter-spacing:0.05em;color:var(--ink-faint);padding:9px 12px 4px;}
 .efp-preview-wrap{background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;padding:22px 18px;display:flex;flex-direction:column;gap:16px;}
 .efp-preview-row{text-align:center;}
-.efp-preview-text{font-size:21px;color:var(--ink);line-height:1.4;word-break:break-word;}
+.efp-preview-text{font-size:21px;font-weight:700;letter-spacing:0.0625em;color:var(--ink);line-height:1.4;word-break:break-word;}
 .efp-preview-caption{font-size:10.5px;letter-spacing:0.04em;color:var(--ink-faint);margin:6px 0 0;}
 .efp-preview-line{height:1px;background:var(--line);}
 
@@ -281,6 +281,21 @@ const ENGRAVE_FONTS = [
   {key:'notosans', name:'思源黑體 Noto Sans TC', family:"'Noto Sans TC', sans-serif", sub:'現代簡約', category:'tc'},
   {key:'klee', name:'Klee One', family:"'Klee One', sans-serif", sub:'溫潤手寫圓體', category:'tc'}
 ];
+/* 各字體的「英文字母視覺大小」校正:同樣字級下,不同字體的字母高度差異很大
+   (例如 Italianno 偏小、Cinzel、Petit Formal Script 偏大),乘上係數讓刻在戒指上的英文大小接近。
+   中日韓文字不調整(英文字體的中文是用系統字體補上,放大縮小會讓中文跟著忽大忽小)。 */
+const ENGRAVE_LATIN_SCALE = {cormorant:1.21, playfair:0.99, cinzel:0.93, bodoni:1.02, ebgaramond:1.12, greatvibes:1.09, dancing:1.23, italianno:1.35, petit:0.86, montserrat:0.95, specialelite:1.01, notoserif:0.95, notosans:0.93, klee:1.03};
+ENGRAVE_FONTS.forEach(f=>{ f.sz = ENGRAVE_LATIN_SCALE[f.key] || 1; });
+const _ENG_CJK_RE = /[\u2E80-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFFEF]/;
+function engraveLatinScale(fam){ const f = ENGRAVE_FONTS.find(x=>x.family===fam); return (f && f.sz) || 1; }
+function engraveCharPx(ch, base, fam){ return _ENG_CJK_RE.test(ch) ? base : base*engraveLatinScale(fam); }
+function engraveFontOf(base, ch, fam){ return `700 ${engraveCharPx(ch, base, fam)}px ${fam}`; }
+/* 預覽框用:把非中日韓的連續文字包上 font-size 係數(輸入已是跳脫過的 HTML 文字) */
+function engraveRunsHTML(escaped, fam){
+  const sz = engraveLatinScale(fam);
+  if(sz === 1) return escaped;
+  return escaped.replace(/[^\u2E80-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFFEF]+/g, m => `<span style="font-size:${sz}em">${m}</span>`);
+}
 const ENGRAVE_FONT_CATEGORIES = [
   {key:'serif', label:'英文襯線'}, {key:'script', label:'英文手寫／花體'},
   {key:'sans', label:'簡約現代'}, {key:'tc', label:'中英皆宜(繁中)'}
@@ -404,11 +419,11 @@ function escapeHTML(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function engravePreviewHTML(){
   const sw = k=>INKS.find(i=>i.key===k).swatch;
   const rows=[];
-  if(st.innerOn) rows.push({caption:'內側刻字', t: st.innerText ? escapeHTML(st.innerText) : '(尚未填寫)', c:sw(st.innerColor), fam:fontOf(st.innerFont).family});
+  if(st.innerOn) rows.push({caption:'內側刻字', t: st.innerText ? escapeHTML(st.innerText) : '(尚未填寫)', c:sw(st.innerColor), fam:fontOf(st.innerFont).family, engraved:!!st.innerText});
   if(!rows.length) rows.push({caption:'', t:'尚未選擇刻字位置', c:'#a89f90', fam:"'Noto Sans TC', sans-serif"});
   return `<div class="efp-preview-wrap">${rows.map((r,i)=>`
     ${i>0?'<div class="efp-preview-line"></div>':''}
-    <div class="efp-preview-row"><div class="efp-preview-text" style="font-family:${r.fam};color:${r.c};">${r.t}</div>
+    <div class="efp-preview-row"><div class="efp-preview-text" style="font-family:${r.fam};color:${r.c};">${r.engraved?engraveRunsHTML(r.t, r.fam):r.t}</div>
     ${r.caption?`<p class="efp-preview-caption">${r.caption}</p>`:''}</div>`).join('')}</div>`;
 }
 function renderEngrave(){
@@ -649,8 +664,17 @@ function buildDesignPhotoCanvas(){
     ctx.fillStyle='#a8a196'; ctx.font='13px "Noto Sans TC", sans-serif'; ctx.fillText('尚未選擇刻字位置', cx, y+engraveH/2+5);
   }else{
     ctx.fillStyle = st.innerColor==='black' ? '#2a251f' : '#9c9690';
-    ctx.font = `27px ${fontOf(st.innerFont).family}`;
-    ctx.fillText(st.innerText || '(尚未填寫)', cx, y+engraveH/2);
+    {
+      const fam0 = fontOf(st.innerFont).family, txt0 = st.innerText || '(尚未填寫)';
+      let fs0 = 27, gap0 = fs0*0.0625;
+      const chs = Array.from(txt0);
+      const meas = ()=>chs.map(c=>{ ctx.font = engraveFontOf(fs0, c, fam0); return ctx.measureText(c).width; });
+      let w0 = meas(); let tot = w0.reduce((a,b)=>a+b,0) + gap0*Math.max(0,chs.length-1);
+      if(tot > colW-40){ const k0=(colW-40)/tot; fs0*=k0; gap0*=k0; w0=meas(); tot=w0.reduce((a,b)=>a+b,0)+gap0*Math.max(0,chs.length-1); }
+      ctx.textAlign='left'; let x0 = cx - tot/2;
+      chs.forEach((c,i)=>{ ctx.font = engraveFontOf(fs0, c, fam0); ctx.fillText(c, x0, y+engraveH/2); x0 += w0[i]+gap0; });
+      ctx.textAlign='center';
+    }
     ctx.fillStyle='#a8a196'; ctx.font='10px "Noto Sans TC", sans-serif'; ctx.fillText('內側刻字', cx, y+engraveH/2+30);
   }
   y+=colBlockH+30;
@@ -901,10 +925,15 @@ function buildInnerTex(thc, H){
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle = st.innerColor==='black' ? '#2a251f' : '#9c9690';
   const f = 1.026;   /* 內側刻字大小與上一版相同 */
-  ctx.font = `600 ${f*S}px ${fontOf(st.innerFont).family}`;
-  try{ ctx.letterSpacing = `${f*0.12*S}px`; }catch(e){}
+  const fam = fontOf(st.innerFont).family;
+  const gap = f*0.0625*S;   /* 字距 0.0625em(約 5px/80px) */
+  const chars = Array.from(st.innerText);
+  ctx.textAlign='left';
+  const ws = chars.map(c=>{ ctx.font = engraveFontOf(f*S, c, fam); return ctx.measureText(c).width; });
+  const total = ws.reduce((a,b)=>a+b,0) + gap*Math.max(0,chars.length-1);
   let u = (thc/(Math.PI*2)) % 1; if(u<0) u+=1;
-  ctx.fillText(st.innerText, (1-u)*C*S, H/2*S);
+  let x = (1-u)*C*S - total/2;
+  chars.forEach((c,i)=>{ ctx.font = engraveFontOf(f*S, c, fam); ctx.fillText(c, x, H/2*S); x += ws[i] + gap; });
   const t=new THREE.CanvasTexture(cv);
   t.wrapS=THREE.RepeatWrapping; t.repeat.x=-1;
   t.anisotropy=renderer.capabilities.getMaxAnisotropy();
@@ -964,7 +993,7 @@ function update(turnToGems){
   rebuildOverlay();
   if(st.innerOn){
     const key=st.innerFont;
-    document.fonts.load(`600 100px ${fontOf(key).family}`).then(()=>{ if(st.innerFont===key) rebuildOverlay(); }).catch(()=>{});
+    document.fonts.load(`700 100px ${fontOf(key).family}`, st.innerText||'Ag').then(()=>{ if(st.innerFont===key) rebuildOverlay(); }).catch(()=>{});
   }
   if(turnToGems){ autoRotate=false; document.getElementById('spinBtn').classList.remove('on'); faceGems(); }
 }
