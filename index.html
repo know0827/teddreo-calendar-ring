@@ -83,6 +83,12 @@ select:focus{outline:2px solid var(--gold);outline-offset:1px;}
 
 /* ---- 寬度、刻字區塊:沿用經典守護石戒指頁的樣式 ---- */
 .opt-desc{font-size:11.5px;color:var(--ink-soft);line-height:1.5;}
+.opt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:6px;}
+.opt-card{border:1px solid var(--line);border-radius:10px;padding:14px 12px;text-align:center;cursor:pointer;transition:all .2s ease;background:var(--surface);}
+.opt-card:hover{border-color:var(--gold-bright);}
+.opt-card:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+.opt-card.selected{border-color:var(--gold);background:var(--gold-pale);}
+.opt-name{font-family:'Noto Serif TC',serif;font-weight:600;font-size:13.5px;margin:0 0 2px;}
 .width-row{display:flex;justify-content:center;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:14px 0 4px;}
 .width-item{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:8px;border-radius:8px;}
 .width-item:hover{background:var(--surface-2);}
@@ -213,22 +219,29 @@ button.act:disabled{opacity:0.6;cursor:wait;}
     </div>
   </div>
 
+  <div class="section" id="sec-finish" style="display:none;">
+    <div class="section-head" onclick="toggleSection('finish')"><span class="section-num">04</span><span class="section-title">表面工藝</span><span class="section-summary" id="sum-finish"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="section-body">
+    <div class="opt-grid" id="finishGrid"></div>
+    </div>
+  </div>
+
   <div class="section" id="sec-engrave" style="display:none;">
-    <div class="section-head" onclick="toggleSection('engrave')"><span class="section-num">04</span><span class="section-title">刻字設計</span><span class="section-summary" id="sum-engrave"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="section-head" onclick="toggleSection('engrave')"><span class="section-num">05</span><span class="section-title">刻字設計</span><span class="section-summary" id="sum-engrave"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="section-body">
     <div id="engraveBody"></div>
     </div>
   </div>
 
   <div class="section" id="sec-ringsize" style="display:none;">
-    <div class="section-head" onclick="toggleSection('ringsize')"><span class="section-num">05</span><span class="section-title">戒指尺寸</span><span class="section-summary" id="sum-ringsize"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="section-head" onclick="toggleSection('ringsize')"><span class="section-num">06</span><span class="section-title">戒指尺寸</span><span class="section-summary" id="sum-ringsize"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="section-body">
     <div id="ringSizeBody"></div>
     </div>
   </div>
 
   <div class="section" id="sec-confirm" style="display:none;">
-    <div class="section-head" onclick="toggleSection('confirm')"><span class="section-num">06</span><span class="section-title">確認訂單</span><span class="section-summary" id="sum-confirm"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="section-head" onclick="toggleSection('confirm')"><span class="section-num">07</span><span class="section-title">確認訂單</span><span class="section-summary" id="sum-confirm"></span><svg class="section-chevron" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div class="section-body">
     <div id="confirmBody"></div>
     </div>
@@ -317,7 +330,13 @@ const THICK = 1.0, CORNER = 0.3;
 let R_OUT = 10, R_IN = R_OUT - THICK;
 const DAY_GAP_MM = 0.75;   /* 數字之間的左右距離(mm,3D 預覽比例) */
 
-let st = {month:3, day:15, monthGem:'diamondwhite', dayGem:'lakeblue', width:4, ink:'black',
+/* 表面工藝(文字說明與經典守護石戒指頁相同) */
+const FINISHES = [
+  {key:'matte', name:'霧面', desc:'低調沉穩,內斂、貴而不顯的柔霧光。'},
+  {key:'polish', name:'亮面', desc:'經過鏡面拋光處理、表面平滑光亮。'}
+];
+const finishName = ()=> FINISHES.find(f=>f.key===st.finish).name;
+let st = {month:3, day:15, monthGem:'diamondwhite', dayGem:'lakeblue', width:4, finish:'matte', ink:'black',
   innerOn:false, innerText:'', innerColor:'silver', innerFont:'specialelite',
   ringSize:'', customerName:'', customerPhone:''};
 const DEFAULT_STATE = JSON.parse(JSON.stringify(st));
@@ -363,6 +382,16 @@ function renderGemPicker(){
     };
   });
 }
+function renderFinish(){
+  const el=document.getElementById('finishGrid');
+  el.innerHTML = FINISHES.map(f=>`
+    <div class="opt-card ${st.finish===f.key?'selected':''}" style="padding:10px 10px;min-height:104px;display:flex;flex-direction:column;justify-content:flex-start;" tabindex="0" role="button"
+         onclick="setFinish('${f.key}')" onkeydown="if(event.key==='Enter'){setFinish('${f.key}')}">
+      <p class="opt-name" style="margin:0 0 6px;font-size:15px;">${f.name}</p>
+      <p class="opt-desc" style="margin:0;">${f.desc}</p>
+    </div>`).join('');
+}
+function setFinish(key){ st.finish=key; renderFinish(); applyFinish(); update(false); goNext('finish'); }
 function renderWidth(){
   const el=document.getElementById('widthRow');
   el.innerHTML = WIDTHS.map(mm=>`
@@ -555,7 +584,8 @@ function renderConfirm(){
 }
 function orderInfoHTML(){
   return `<h3>訂單資訊</h3>
-    <div class="order-row"><span class="l">款式 / 寬度</span><span class="v">${PRODUCT_NAME}・平邊亮面・${st.width}mm</span></div>
+    <div class="order-row"><span class="l">款式 / 寬度</span><span class="v">${PRODUCT_NAME}・平邊・${st.width}mm</span></div>
+    <div class="order-row"><span class="l">表面工藝</span><span class="v">${finishName()}</span></div>
     <div class="order-row"><span class="l">紀念日期</span><span class="v">${dateText()}</span></div>
     <div class="order-row"><span class="l">寶石</span><span class="v">${gemText()}</span></div>
     <div class="order-row"><span class="l">刻字</span><span class="v">${escapeHTML(engraveSummaryText())}</span></div>
@@ -587,7 +617,8 @@ function requireRingSize(){
 function buildOrderText(){
   return [
     `【${BRAND_NAME} 訂購資訊】`,
-    `款式:${PRODUCT_NAME}(平邊亮面)`,
+    `款式:${PRODUCT_NAME}(平邊)`,
+    `表面工藝:${finishName()}`,
     `戒指寬度:${st.width}mm`,
     `紀念日期:${dateText()}`,
     `寶石:${gemText()}`,
@@ -624,7 +655,8 @@ function buildDesignPhotoCanvas(){
 
   const W=900, imgSize=700, topPad=46, titleBlockH=46;
   const orderRows=[
-    ['款式', `${PRODUCT_NAME}・平邊亮面`],
+    ['款式', `${PRODUCT_NAME}・平邊`],
+    ['表面工藝', finishName()],
     ['戒指寬度', st.width+'mm'],
     ['紀念日期', `${MONTHS[st.month-1]} ${st.day}`],
     ['月份寶石', gemName(st.monthGem)],
@@ -729,7 +761,7 @@ async function submitDesignByLine(){
       customer_phone: st.customerPhone.trim(),
       shape_name: `${PRODUCT_NAME}(平邊)`,
       width_mm: st.width+'mm',
-      finish_name: '亮面',
+      finish_name: finishName(),
       gem_name: `${dateText()}|${gemText()}`,
       ring_size: st.ringSize ? st.ringSize+' 號' : '(尚未填寫)',
       engrave_inner: st.innerOn ? `${st.innerText || '(未填寫)'}（${fontOf(st.innerFont).name}・${st.innerColor==='black'?'黑色':'銀色'}）` : '',
@@ -754,7 +786,7 @@ function restartAll(){
   st = JSON.parse(JSON.stringify(DEFAULT_STATE));
   monthSel.value = st.month; fillDays();
   gemTarget='monthGem'; flow={revealed:0, open:'date'};
-  renderGemPicker(); renderWidth(); renderEngrave(); renderRingSize(); renderConfirm();
+  renderGemPicker(); renderWidth(); renderFinish(); renderEngrave(); renderRingSize(); renderConfirm();
   const m=document.getElementById('submitStatusMsg'); if(m) m.remove();
   renderConfirm(); renderAccordion();
   rebuildBand(); update(true);
@@ -767,6 +799,7 @@ const SECTIONS = [
   {id:'date', summary:()=>`${MONTHS[st.month-1]} ${st.day}`},
   {id:'gem', summary:()=>`${GEMS.find(g=>g.key===st.monthGem).name}・${GEMS.find(g=>g.key===st.dayGem).name}`},
   {id:'width', summary:()=>st.width+'mm'},
+  {id:'finish', summary:()=>finishName()},
   {id:'engrave', summary:()=> st.innerOn ? `內「${st.innerText||'未填寫'}」` : '不刻字'},
   {id:'ringsize', summary:()=> st.ringSize ? `${st.ringSize} 號` : '尚未填寫'},
   {id:'confirm', summary:()=>'查看完整摘要'}
@@ -800,7 +833,7 @@ function renderSummary(){
   const mg = GEMS.find(g=>g.key===st.monthGem).name, dg = GEMS.find(g=>g.key===st.dayGem).name;
   const sumEl=document.getElementById('summary'); if(!sumEl) return;
   sumEl.innerHTML =
-    `<b>${MONTHS[st.month-1]} ${st.day}</b>・月份 ${mg} × 日期 ${dg}・平邊亮面 ${st.width}mm` + (st.innerOn && st.innerText ? `・內側「${escapeHTML(st.innerText)}」` : '');
+    `<b>${MONTHS[st.month-1]} ${st.day}</b>・月份 ${mg} × 日期 ${dg}・平邊${finishName()} ${st.width}mm` + (st.innerOn && st.innerText ? `・內側「${escapeHTML(st.innerText)}」` : '');
 }
 
 /* ================= 3D ================= */
@@ -911,12 +944,42 @@ function updateRingRadius(){
   for(let d=1; d<=31; d++) len += ctx.measureText(String(d)).width/100 + DAY_GAP_MM;
   R_OUT = len/(2*Math.PI); R_IN = R_OUT - THICK;
 }
+/* 表面工藝材質:霧面 = 目前 3D 戒指的樣子;亮面 = 鏡面拋光,反光更銳利、明暗對比更強 */
+let polishEnvTex = null;
+function bandMaterial(){
+  if(st.finish==='polish'){
+    const m = new THREE.MeshStandardMaterial({color:0xe6e8ea, metalness:1, roughness:0.04, side:THREE.DoubleSide});
+    if(polishEnvTex){ m.envMap = polishEnvTex; m.envMapIntensity = 1.0; }
+    return m;
+  }
+  return new THREE.MeshStandardMaterial({color:0xeef0f1, metalness:1, roughness:0.07, side:THREE.DoubleSide});
+}
+function applyFinish(){
+  if(!THREE_OK || !bandMesh) return;
+  bandMesh.material.dispose();
+  bandMesh.material = bandMaterial();
+}
+function buildPolishEnvTexture(){
+  /* 拋光鏡面用的環境貼圖:亮白燈條與深色區塊分明,反射出清楚的高光帶 */
+  const w=512, h=256, cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d');
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(0.3,'#f2f1ec'); g.addColorStop(0.5,'#a9a59a');
+  g.addColorStop(0.62,'#55524a'); g.addColorStop(1,'#2c2a25');
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  [[0.06,0.035],[0.27,0.06],[0.52,0.025],[0.71,0.07],[0.9,0.03]].forEach(([x,ww])=>{
+    ctx.fillStyle='#ffffff'; ctx.fillRect(w*x,0,w*ww,h*0.58);
+  });
+  [[0.18,0.05],[0.44,0.04],[0.83,0.045]].forEach(([x,ww])=>{
+    ctx.fillStyle='rgba(60,58,52,0.38)'; ctx.fillRect(w*x,h*0.08,w*ww,h*0.45);
+  });
+  const t=new THREE.CanvasTexture(cv); t.mapping=THREE.EquirectangularReflectionMapping; return t;
+}
 function rebuildBand(){
   if(!THREE_OK) return;
   updateRingRadius();
   if(bandMesh){ spinGroup.remove(bandMesh); bandMesh.geometry.dispose(); }
-  bandMesh = new THREE.Mesh(bandGeometry(st.width*WIDTH_VISUAL_SCALE),
-    new THREE.MeshStandardMaterial({color:0xeef0f1, metalness:1, roughness:0.07, side:THREE.DoubleSide}));
+  bandMesh = new THREE.Mesh(bandGeometry(st.width*WIDTH_VISUAL_SCALE), bandMaterial());
   spinGroup.add(bandMesh);
 }
 
@@ -1013,7 +1076,8 @@ function initThree(){
     camera=new THREE.PerspectiveCamera(28,1,0.1,300);
     camera.position.set(0,0,64);
     const pm=new THREE.PMREMGenerator(renderer), env=buildEnvTexture();
-    scene.environment=pm.fromEquirectangular(env).texture; env.dispose(); pm.dispose();
+    scene.environment=pm.fromEquirectangular(env).texture; env.dispose();
+    const penv=buildPolishEnvTexture(); polishEnvTex=pm.fromEquirectangular(penv).texture; penv.dispose(); pm.dispose();
     scene.add(new THREE.AmbientLight(0xffffff,0.5));
     scene.add(new THREE.HemisphereLight(0xffffff,0xb0aca0,0.6));
     const key=new THREE.DirectionalLight(0xfff8ee,1.0); key.position.set(12,18,24); scene.add(key);
@@ -1024,7 +1088,7 @@ function initThree(){
     THREE_OK=true;
     rebuildBand(); rebuildOverlay(); faceGems();
     /* 戒圍縮小後,鏡頭等比例拉近,讓初始畫面中的戒指大小維持不變 */
-    camera.position.z = 64 * R_OUT/10;
+    camera.position.z = 72 * R_OUT/10;
     window.__R_OUT = R_OUT; rotY = targetY || 0; targetY = null;
 
     const resize=()=>{ const s=stage.clientWidth; renderer.setSize(s,s,false); camera.aspect=1; camera.updateProjectionMatrix(); };
@@ -1071,7 +1135,7 @@ function initThree(){
   }
 }
 
-renderGemPicker(); renderWidth(); renderEngrave(); renderRingSize(); renderConfirm();
+renderGemPicker(); renderWidth(); renderFinish(); renderEngrave(); renderRingSize(); renderConfirm();
 renderAccordion(); renderSummary();
 /* 等刻字字體載入後再建立貼圖,避免先用預設字體畫出來 */
 Promise.race([
@@ -1085,7 +1149,7 @@ Promise.race([
     try{ Object.assign(st, JSON.parse(backup)); }catch(e){}
     ssDel('teddreo_design_backup');
     monthSel.value = st.month; fillDays();
-    renderGemPicker(); renderWidth(); renderEngrave(); renderRingSize(); renderConfirm();
+    renderGemPicker(); renderWidth(); renderFinish(); renderEngrave(); renderRingSize(); renderConfirm();
     rebuildBand(); update(true);
   }
   if(autoSubmit && getCustomerLineUid()){
